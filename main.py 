@@ -1,0 +1,44 @@
+import os
+from file_operations.file_handler import FileHandler
+from mongo_integration import MongoDBIntegration
+
+def main():
+    # Prompt the user for the directory to search for images
+    directory = input("Enter the directory path to search for images: ")
+
+    if not os.path.exists(directory):
+        print(f"Error: The directory '{directory}' does not exist.")
+        return
+
+    # Initialize the file handler
+    file_handler = FileHandler()
+
+    try:
+        # Get the path to the temp directory with all the valid images
+        temp_directory = file_handler.get_image_files(directory)
+        print(f"Images have been copied to the temporary directory: {temp_directory}")
+
+        # Initialize MongoDB integration
+        mongo_integration = MongoDBIntegration()
+
+        # Store file paths in MongoDB
+        for image_file in os.listdir(temp_directory):
+            file_path = os.path.join(temp_directory, image_file)
+            inserted_id = mongo_integration.insert_file_path(image_file, file_path)
+            print(f"Inserted file '{image_file}' into MongoDB with document ID: {inserted_id}")
+
+        # Retrieve all stored file paths from MongoDB
+        all_files = mongo_integration.get_all_file_paths()
+        print("\nFiles stored in MongoDB:")
+        for file in all_files:
+            print(f"File Name: {file['file_name']}, File Path: {file['file_path']}")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    finally:
+        # Close MongoDB connection
+        mongo_integration.close_connection()
+
+if __name__ == "__main__":
+    main()

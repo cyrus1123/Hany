@@ -1,0 +1,77 @@
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+
+class MongoDBIntegration:
+    def __init__(self):
+        # Load environment variables from the .env file
+        load_dotenv()
+
+        # Get the MongoDB URI from the environment variables
+        self.mongo_uri = os.getenv('MONGO_URI')
+
+        if not self.mongo_uri:
+            raise Exception("MongoDB URI not found in environment variables")
+
+        # Connect to the MongoDB client
+        self.client = MongoClient(self.mongo_uri)
+
+        # Extract the database name from the URI
+        self.db_name = self.mongo_uri.split('/')[-1]
+        self.db = self.client[self.db_name]
+
+    def insert_file_path(self, file_name, file_path):
+        """Insert a file path into the MongoDB collection."""
+        collection = self.db['image_files']
+        document = {
+            "file_name": file_name,
+            "file_path": file_path
+        }
+        result = collection.insert_one(document)
+        return result.inserted_id
+
+    def get_all_file_paths(self):
+        """Retrieve all file paths from the MongoDB collection."""
+        collection = self.db['image_files']
+        files = collection.find({})
+        return list(files)
+
+    def find_file_by_name(self, file_name):
+        """Find a file document by its name."""
+        collection = self.db['image_files']
+        file = collection.find_one({"file_name": file_name})
+        return file
+
+    def delete_file_by_name(self, file_name):
+        """Delete a file document by its name."""
+        collection = self.db['image_files']
+        result = collection.delete_one({"file_name": file_name})
+        return result.deleted_count
+
+    def close_connection(self):
+        """Close the MongoDB connection."""
+        self.client.close()
+
+# Example usage:
+if __name__ == "__main__":
+    # Initialize MongoDB Integration
+    mongo_integration = MongoDBIntegration()
+
+    # Insert a file path
+    inserted_id = mongo_integration.insert_file_path("image1.jpg", "/path/to/image1.jpg")
+    print(f"Inserted document ID: {inserted_id}")
+
+    # Get all file paths
+    all_files = mongo_integration.get_all_file_paths()
+    print(f"Files in MongoDB: {all_files}")
+
+    # Find a specific file by name
+    file = mongo_integration.find_file_by_name("image1.jpg")
+    print(f"Found file: {file}")
+
+    # Delete a file by name
+    deleted_count = mongo_integration.delete_file_by_name("image1.jpg")
+    print(f"Number of files deleted: {deleted_count}")
+
+    # Close the connection
+    mongo_integration.close_connection()
